@@ -31,7 +31,7 @@ def song(update: Update, context: CallbackContext):
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(f"ytsearch1:{song_name}", download=True)
+            info = ydl.extract_info(f"ytsearch:{song_name}", download=True)  # Дұрыс жазылған параметр
             entry = info['entries'][0]
             title = entry.get('title', 'song')
             filename = f"{title}.mp3"
