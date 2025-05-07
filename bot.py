@@ -22,15 +22,17 @@ def song(update: Update, context: CallbackContext):
             'extractaudio': True,  # Тек аудио шығару
             'outtmpl': 'downloads/%(id)s.%(ext)s',  # Файлды сақтау жолы
             'quiet': True,  # Әрекеттер туралы көп ақпарат көрсетпеу
+            'noplaylist': True,  # Плейлисттерді қоспау
         }
 
         try:
             # yt-dlp арқылы әнді жүктеу
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                # Түзету: әннің атын дұрыс іздеу үшін "ytsearch" іздеуге қосу
                 info = ydl.extract_info(f"ytsearch:{song_name}", download=True)
                 
                 # Егер нәтиже болса
-                if 'entries' in info:
+                if 'entries' in info and len(info['entries']) > 0:
                     video_url = info['entries'][0]['url']
                     file_path = f"downloads/{info['entries'][0]['id']}.mp3"
                     update.message.reply_text(f"Әнді жүктеп жатырмыз: {video_url}")
