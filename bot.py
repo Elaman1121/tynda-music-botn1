@@ -1,21 +1,16 @@
 import os
+import yt_dlp
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, CallbackContext
-import yt_dlp
 
-# Боттың токенін осында қой
-TOKEN = 'ТВОЙ_ТОКЕН_ОСЫНДА'
-
-# Жүктелетін файлдардың сақталатын папкасы
-DOWNLOAD_DIR = 'downloads'
-os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+TOKEN = '7302516914:AAFf7O9szcJD5GZGSsSs3TuyHdyvKhF8zN8'  # Сенің токенің
 
 def start(update: Update, context: CallbackContext):
-    update.message.reply_text("Сәлем! Музыка алу үшін /song командасын және ән атын жаз:\nМысалы: /song Qara kyz")
+    update.message.reply_text("Сәлем! Музыка үшін /song командасын қолданыңыз.\nМысалы: /song sagyndym seni")
 
 def song(update: Update, context: CallbackContext):
     if not context.args:
-        update.message.reply_text("Әннің атын жазыңыз. Мысалы: /song sagyndym seni")
+        update.message.reply_text("Ән атын жазыңыз. Мысалы: /song Qara kyz")
         return
 
     song_name = ' '.join(context.args)
@@ -25,7 +20,8 @@ def song(update: Update, context: CallbackContext):
         'format': 'bestaudio/best',
         'noplaylist': True,
         'quiet': True,
-        'outtmpl': f'{DOWNLOAD_DIR}/%(title)s.%(ext)s',
+        'outtmpl': f'%(title)s.%(ext)s',
+        'ffmpeg_location': '/app/.heroku/ffmpeg/bin/ffmpeg',  # Heroku үшін ffmpeg жолы
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
@@ -38,12 +34,11 @@ def song(update: Update, context: CallbackContext):
             info = ydl.extract_info(f"ytsearch1:{song_name}", download=True)
             entry = info['entries'][0]
             title = entry.get('title', 'song')
-            filename = os.path.join(DOWNLOAD_DIR, f"{title}.mp3")
+            filename = f"{title}.mp3"
 
         with open(filename, 'rb') as audio_file:
             context.bot.send_audio(chat_id=update.effective_chat.id, audio=audio_file, title=title)
 
-        # Файлды өшіріп тастау (қаласаң)
         os.remove(filename)
 
     except Exception as e:
