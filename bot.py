@@ -4,8 +4,7 @@ from telegram.ext import Updater, CommandHandler, CallbackContext
 import yt_dlp
 
 # Telegram ботыңның токенін осында жаз
-TOKEN = 'YOUR_BOT_TOKEN_HERE'
-
+TOKEN = '7302516914:AAFf7O9szcJD5GZGSsSs3TuyHdyvKhF8zN8'
 # MP3 файлдар сақталатын папка
 DOWNLOAD_DIR = 'downloads'
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
