@@ -1,6 +1,8 @@
 from telegram import Update
 from telegram.ext import Updater, CommandHandler
-import youtube_dl, os
+import yt_dlp as youtube_dl
+from PIL import Image  # Pillow кітапханасын қосамыз
+import os
 
 TOKEN = "7302516914:AAFf7O9szcJD5GZGSsSs3TuyHdyvKhF8zN8"
 
@@ -26,6 +28,8 @@ def download(update: Update, context):
         info = ydl.extract_info(f"ytsearch:{query}", download=True)['entries'][0]
     filename = f"{info['title']}.mp3"
     os.rename("song.mp3", filename)
+    
+    # Музыка файлды жіберу
     update.message.reply_audio(open(filename, 'rb'))
     os.remove(filename)
 
