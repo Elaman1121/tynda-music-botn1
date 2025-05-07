@@ -48,3 +48,26 @@ dispatcher.add_handler(start_handler)
 dispatcher.add_handler(song_handler)
 
 updater.start_polling()
+import yt_dlp
+
+def search_song(song_name):
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'quiet': True,
+        'extractaudio': True,  # аудио алу
+        'audioquality': 1,     # жоғары сапа
+        'postprocessors': [{
+            'key': 'FFmpegAudioConvertor',
+            'preferredcodec': 'mp3',
+            'preferredquality': '320',
+        }],
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        result = ydl.extract_info(f"ytsearch:{song_name}", download=False)
+        if 'entries' in result:
+            return result['entries'][0]['url']
+        return None
+    
+# Тест функциясы
+print(search_song('sagyndym'))  # Бұл жерде 'sagyndym' әнін іздеңіз
