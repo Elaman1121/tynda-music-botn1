@@ -31,7 +31,7 @@ def song(update: Update, context: CallbackContext):
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(f"ytsearch:{song_name}", download=True)  # Дұрыс жазылған параметр
+            info = ydl.extract_info(f"ytsearch1:{song_name}", download=True)
             entry = info['entries'][0]
             title = entry.get('title', 'song')
             filename = f"{title}.mp3"
@@ -45,11 +45,16 @@ def song(update: Update, context: CallbackContext):
         update.message.reply_text(f"Қате болды: {str(e)}")
 
 def main():
+    # Webhook орнату
+    app_url = "https://your-heroku-app-name.herokuapp.com/"  # Heroku URL
     updater = Updater(token=TOKEN, use_context=True)
     dp = updater.dispatcher
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("song", song))
-    updater.start_polling()
+
+    # Webhook-ты орнату
+    updater.start_webhook(listen="0.0.0.0", port=int(os.environ.get('PORT', 5000)), url_path=TOKEN)
+    updater.bot.set_webhook(url=app_url + TOKEN)
     updater.idle()
 
 if __name__ == '__main__':
