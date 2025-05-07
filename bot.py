@@ -28,7 +28,7 @@ def song(update: Update, context: CallbackContext):
         try:
             # yt-dlp арқылы әнді жүктеу
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                # Түзету: әннің атын дұрыс іздеу үшін "ytsearch" іздеуге қосу
+                # Әнді іздеу
                 info = ydl.extract_info(f"ytsearch:{song_name}", download=True)
                 
                 # Егер нәтиже болса
@@ -46,7 +46,7 @@ def song(update: Update, context: CallbackContext):
                     else:
                         update.message.reply_text("Ән жүктелген жоқ.")
                 else:
-                    update.message.reply_text("Өкінішке орай, ән табылмады.")
+                    update.message.reply_text("Өкінішке орай, ән табылмады. Басқа атауды сынап көріңіз.")
         except Exception as e:
             update.message.reply_text(f"Қате орын алды: {str(e)}")
     else:
