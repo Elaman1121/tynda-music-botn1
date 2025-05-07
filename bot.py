@@ -6,7 +6,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Callb
 TOKEN = "7302516914:AAFf7O9szcJD5GZGSsSs3TuyHdyvKhF8zN8"
 
 def start(update: Update, context: CallbackContext):
-    update.message.reply_text("Сәлем! Ән атын жазсаңыз, MP3 жіберемін.")
+    update.message.reply_text("Сәлем! Ән атын жазыңыз, мен MP3 жіберемін.")
 
 def download_audio(query):
     ydl_opts = {
@@ -42,7 +42,7 @@ def main():
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
-    # Тек polling
+    # Тек polling қолданамыз
     updater.start_polling()
     updater.idle()
 
