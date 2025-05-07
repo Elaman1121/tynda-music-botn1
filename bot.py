@@ -1,5 +1,6 @@
 import yt_dlp
 import os
+import time
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, CallbackContext
 
@@ -23,20 +24,27 @@ def song(update: Update, context: CallbackContext):
             'quiet': True,  # Әрекеттер туралы көп ақпарат көрсетпеу
         }
 
-        # yt-dlp арқылы әнді жүктеу
         try:
+            # yt-dlp арқылы әнді жүктеу
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(f"ytsearch:{song_name}", download=True)
-                # Ең жақсы нәтижені алу
-                video_url = info['entries'][0]['url']
-                file_path = f"downloads/{info['entries'][0]['id']}.mp3"
+                
+                # Егер нәтиже болса
+                if 'entries' in info:
+                    video_url = info['entries'][0]['url']
+                    file_path = f"downloads/{info['entries'][0]['id']}.mp3"
+                    update.message.reply_text(f"Әнді жүктеп жатырмыз: {video_url}")
 
-                # Файлды Telegram арқылы жіберу
-                if os.path.exists(file_path):
-                    update.message.reply_audio(open(file_path, 'rb'))
-                    os.remove(file_path)  # Файлды жіберген соң жоямыз
+                    # Файлды Telegram арқылы жіберу
+                    if os.path.exists(file_path):
+                        # Жіберу алдында 3 секунд күту
+                        time.sleep(3)
+                        update.message.reply_audio(open(file_path, 'rb'))
+                        os.remove(file_path)  # Файлды жіберген соң жоямыз
+                    else:
+                        update.message.reply_text("Ән жүктелген жоқ.")
                 else:
-                    update.message.reply_text("Әнді жүктеу кезінде қате орын алды.")
+                    update.message.reply_text("Өкінішке орай, ән табылмады.")
         except Exception as e:
             update.message.reply_text(f"Қате орын алды: {str(e)}")
     else:
