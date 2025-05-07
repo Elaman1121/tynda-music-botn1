@@ -1,73 +1,64 @@
-import telegram
-from telegram.ext import Updater, CommandHandler
+import os
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, CallbackContext
 import yt_dlp
 
-TOKEN = '7302516914:AAFf7O9szcJD5GZGSsSs3TuyHdyvKhF8zN8'  # Сіздің токеніңіз
+# Telegram ботыңның токенін осында жаз
+TOKEN = 'YOUR_BOT_TOKEN_HERE'
 
-updater = Updater(token=TOKEN, use_context=True)
-dispatcher = updater.dispatcher
+# MP3 файлдар сақталатын папка
+DOWNLOAD_DIR = 'downloads'
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-def start(update, context):
-    update.message.reply_text("Сәлем! Әннің атын /song командасынан кейін жаз.")
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text("Сәлем! Маған /song командасымен әннің атын жаз:\nМысалы: /song sagyndym seni")
 
-def song(update, context):
+def song(update: Update, context: CallbackContext):
+    if not context.args:
+        update.message.reply_text("Әннің атын жазыңыз. Мысалы: /song sagyndym seni")
+        return
+
     song_name = ' '.join(context.args)
-    if song_name:
-        # Әнді іздеу және MP3 файлы ретінде қайта жіберу
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'outtmpl': 'downloads/%(id)s.%(ext)s',
-            'quiet': True,
-            'extractaudio': True,  # аудио алу
-            'audioquality': 1,     # жоғары сапа
-            'postprocessors': [{
-                'key': 'FFmpegAudioConvertor',
-                'preferredcodec': 'mp3',  # MP3 форматы
-                'preferredquality': '320',  # 320 kbps
-            }],
-        }
+    update.message.reply_text(f"Іздеп жатырмын: {song_name}...")
 
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(f"ytsearch:{song_name}", download=False)
-            url = info['entries'][0]['url']  # бірінші нәтижені алу
-            song_file = ydl.prepare_filename(info['entries'][0])
-            
-            # Жүктеу
-            ydl.download([f"ytsearch:{song_name}"])
-            
-            # Файлды Telegram арқылы жіберу
-            context.bot.send_audio(chat_id=update.message.chat_id, audio=open(song_file, 'rb'))
-
-    else:
-        update.message.reply_text("Әннің атын жазыңыз!")
-
-start_handler = CommandHandler('start', start)
-song_handler = CommandHandler('song', song)
-
-dispatcher.add_handler(start_handler)
-dispatcher.add_handler(song_handler)
-
-updater.start_polling()
-import yt_dlp
-
-def search_song(song_name):
     ydl_opts = {
         'format': 'bestaudio/best',
+        'outtmpl': f'{DOWNLOAD_DIR}/%(title)s.%(ext)s',
         'quiet': True,
-        'extractaudio': True,  # аудио алу
-        'audioquality': 1,     # жоғары сапа
+        'noplaylist': True,
         'postprocessors': [{
-            'key': 'FFmpegAudioConvertor',
+            'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
             'preferredquality': '320',
         }],
     }
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        result = ydl.extract_info(f"ytsearch:{song_name}", download=False)
-        if 'entries' in result:
-            return result['entries'][0]['url']
-        return None
-    
-# Тест функциясы
-print(search_song('sagyndym'))  # Бұл жерде 'sagyndym' әнін іздеңіз
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(f"ytsearch1:{song_name}", download=True)
+            entry = info['entries'][0]
+            title = entry.get('title', 'song')
+            filename = os.path.join(DOWNLOAD_DIR, f"{title}.mp3")
+
+        # Файл жіберу
+        with open(filename, 'rb') as audio_file:
+            context.bot.send_audio(chat_id=update.message.chat_id, audio=audio_file, title=title)
+
+        # Қаласаң, файлды жүктеп болған соң өшіріп тастауға болады:
+        # os.remove(filename)
+
+    except Exception as e:
+        update.message.reply_text(f"Қате болды: {e}")
+
+def main():
+    updater = Updater(token=TOKEN, use_context=True)
+    dp = updater.dispatcher
+
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("song", song))
+
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == '__main__':
+    main()
