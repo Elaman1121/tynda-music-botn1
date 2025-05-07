@@ -3,14 +3,15 @@ from telegram import Update
 from telegram.ext import Updater, CommandHandler, CallbackContext
 import yt_dlp
 
-# Telegram ботыңның токенін осында жаз
-TOKEN = '7302516914:AAFf7O9szcJD5GZGSsSs3TuyHdyvKhF8zN8'
-# MP3 файлдар сақталатын папка
+# Боттың токенін осында қой
+TOKEN = 'ТВОЙ_ТОКЕН_ОСЫНДА'
+
+# Жүктелетін файлдардың сақталатын папкасы
 DOWNLOAD_DIR = 'downloads'
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 def start(update: Update, context: CallbackContext):
-    update.message.reply_text("Сәлем! Маған /song командасымен әннің атын жаз:\nМысалы: /song sagyndym seni")
+    update.message.reply_text("Сәлем! Музыка алу үшін /song командасын және ән атын жаз:\nМысалы: /song Qara kyz")
 
 def song(update: Update, context: CallbackContext):
     if not context.args:
@@ -22,9 +23,9 @@ def song(update: Update, context: CallbackContext):
 
     ydl_opts = {
         'format': 'bestaudio/best',
-        'outtmpl': f'{DOWNLOAD_DIR}/%(title)s.%(ext)s',
-        'quiet': True,
         'noplaylist': True,
+        'quiet': True,
+        'outtmpl': f'{DOWNLOAD_DIR}/%(title)s.%(ext)s',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
@@ -39,23 +40,20 @@ def song(update: Update, context: CallbackContext):
             title = entry.get('title', 'song')
             filename = os.path.join(DOWNLOAD_DIR, f"{title}.mp3")
 
-        # Файл жіберу
         with open(filename, 'rb') as audio_file:
-            context.bot.send_audio(chat_id=update.message.chat_id, audio=audio_file, title=title)
+            context.bot.send_audio(chat_id=update.effective_chat.id, audio=audio_file, title=title)
 
-        # Қаласаң, файлды жүктеп болған соң өшіріп тастауға болады:
-        # os.remove(filename)
+        # Файлды өшіріп тастау (қаласаң)
+        os.remove(filename)
 
     except Exception as e:
-        update.message.reply_text(f"Қате болды: {e}")
+        update.message.reply_text(f"Қате болды: {str(e)}")
 
 def main():
     updater = Updater(token=TOKEN, use_context=True)
     dp = updater.dispatcher
-
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("song", song))
-
     updater.start_polling()
     updater.idle()
 
