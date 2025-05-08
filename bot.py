@@ -56,10 +56,11 @@ def download_audio(query: str, file_name: str = "song.mp3") -> str or None:
         'outtmpl': file_name,
         'noplaylist': True,
         'quiet': True,
+        'cookiefile': 'cookies.txt',  # cookie файлын қосу
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
-            'preferredquality': '192',
+            'preferredquality': '320',  # 320 kbps сапа
         }],
     }
 
@@ -68,7 +69,7 @@ def download_audio(query: str, file_name: str = "song.mp3") -> str or None:
             info = ydl.extract_info(f"ytsearch:{query}", download=True)
             return file_name if os.path.exists(file_name) else None
         except Exception as e:
-            print("Error:", e)
+            print("Қате:", e)
             return None
 
 def handle_music_request(update: Update, context: CallbackContext):
@@ -108,5 +109,5 @@ def main():
     updater.start_polling()
     updater.idle()
 
-if __name__ == '__main__':
+if _name_ == '_main_':
     main()
