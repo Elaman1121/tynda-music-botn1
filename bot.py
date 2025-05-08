@@ -34,7 +34,7 @@ def start(update: Update, context: CallbackContext):
     user_lang.pop(user_id, None)  # reset previous language
     keyboard = [[key for key in LANGUAGES]]
     reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=False, resize_keyboard=True)
-    update.message.reply_text("", reply_markup=reply_markup)
+    update.message.reply_text(" ", reply_markup=reply_markup)  # бос хабарлама
 
 def handle_language_selection(update: Update, context: CallbackContext):
     lang_key = update.message.text
@@ -46,9 +46,10 @@ def handle_language_selection(update: Update, context: CallbackContext):
         user_lang[user_id] = lang_code
         update.message.reply_text(GREETINGS[lang_code].format(name=name), reply_markup=ReplyKeyboardRemove())
     else:
+        # Егер басқа хабарлама келсе — қайтадан тек тіл кнопкасын көрсет
         keyboard = [[key for key in LANGUAGES]]
         reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=False, resize_keyboard=True)
-        update.message.reply_text("", reply_markup=reply_markup)
+        update.message.reply_text(" ", reply_markup=reply_markup)
 
 def handle_music_request(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
@@ -57,7 +58,7 @@ def handle_music_request(update: Update, context: CallbackContext):
     if not lang_code:
         keyboard = [[key for key in LANGUAGES]]
         reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=False, resize_keyboard=True)
-        update.message.reply_text("", reply_markup=reply_markup)
+        update.message.reply_text(" ", reply_markup=reply_markup)
         return
 
     if update.message.audio or update.message.photo:
@@ -65,7 +66,7 @@ def handle_music_request(update: Update, context: CallbackContext):
         return
 
     song_name = update.message.text.strip()
-    song_found = False  # Replace with real logic
+    song_found = False
 
     if song_found:
         update.message.reply_text(FOUND_MESSAGES[lang_code])
