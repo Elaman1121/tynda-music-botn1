@@ -32,15 +32,9 @@ user_lang = {}  # user_id: 'kk' or 'ru' or 'en'
 def start(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     user_lang.pop(user_id, None)  # reset previous language
-    # Show language selection with buttons next to the text
-    update.message.reply_text(
-        "Алдымен тілді таңдаңыз! / Сначала выберите язык! / Please select a language first!", 
-        reply_markup=ReplyKeyboardMarkup(
-            [[key for key in LANGUAGES]], 
-            one_time_keyboard=True, 
-            resize_keyboard=True
-        )
-    )
+    keyboard = [[key for key in LANGUAGES]]
+    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+    update.message.reply_text("Тілді таңдаңыз / Выберите язык / Select language:", reply_markup=reply_markup)
 
 def handle_language_selection(update: Update, context: CallbackContext):
     lang_key = update.message.text
@@ -50,18 +44,7 @@ def handle_language_selection(update: Update, context: CallbackContext):
     if lang_key in LANGUAGES:
         lang_code = LANGUAGES[lang_key]
         user_lang[user_id] = lang_code
-        update.message.reply_text(
-            GREETINGS[lang_code].format(name=name), 
-            reply_markup=ReplyKeyboardRemove()
-        )
-        # Show message and reset button for the user to select language again if needed
-        update.message.reply_text(
-            "Тілді таңдап қойдыңыз! Қазір ән атын жазыңыз. 🎶\n\nТілді өзгерту үшін кез келген уақытта таңдаңыз:", 
-            reply_markup=ReplyKeyboardMarkup(
-                [[key for key in LANGUAGES]], 
-                resize_keyboard=True
-            )
-        )
+        update.message.reply_text(GREETINGS[lang_code].format(name=name), reply_markup=ReplyKeyboardRemove())
     else:
         update.message.reply_text("Тілді дұрыс таңдаңыз / Выберите язык правильно / Choose a valid language")
 
