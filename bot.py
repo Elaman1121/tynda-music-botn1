@@ -45,6 +45,12 @@ def handle_language_selection(update: Update, context: CallbackContext):
         lang_code = LANGUAGES[lang_key]
         user_lang[user_id] = lang_code
         update.message.reply_text(GREETINGS[lang_code].format(name=name), reply_markup=ReplyKeyboardRemove())
+        
+        # Language buttons below after greeting
+        keyboard = [[key for key in LANGUAGES]]
+        reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        update.message.reply_text("Тілді таңдап қойдыңыз! Қазір ән атын жазыңыз. 🎶\n\nТілді өзгерту үшін кез келген уақытта таңдаңыз:", reply_markup=reply_markup)
+        
     else:
         update.message.reply_text("Тілді дұрыс таңдаңыз / Выберите язык правильно / Choose a valid language")
 
