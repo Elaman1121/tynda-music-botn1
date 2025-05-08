@@ -32,8 +32,8 @@ user_lang = {}  # user_id: 'kk' or 'ru' or 'en'
 def start(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     user_lang.pop(user_id, None)  # reset previous language
-    keyboard = [[key for key in LANGUAGES]]
-    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+    keyboard = [[key for key in LANGUAGES]]  # Keybord in first row
+    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=False, resize_keyboard=True)
     update.message.reply_text("Тілді таңдаңыз / Выберите язык / Select language:", reply_markup=reply_markup)
 
 def handle_language_selection(update: Update, context: CallbackContext):
@@ -54,6 +54,9 @@ def handle_music_request(update: Update, context: CallbackContext):
 
     if not lang_code:
         update.message.reply_text("Алдымен тілді таңдаңыз! / Сначала выберите язык! / Please select a language first!")
+        keyboard = [[key for key in LANGUAGES]]  # Keybord in first row
+        reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=False, resize_keyboard=True)
+        update.message.reply_text("Тілді таңдаңыз / Выберите язык / Select language:", reply_markup=reply_markup)
         return
 
     # Checking if user is trying to send media (audio or photo)
@@ -84,4 +87,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    
