@@ -15,44 +15,17 @@ GREETINGS = {
     'en': "Hello, {name}! 👋\nI’m Tyn’da Music Bot. Happy to see you! ☺️\nTell me the name of the song and I’ll find it for you instantly! 🎶"
 }
 
-def get_song_response(song_found: bool, language: str) -> str:
-    if song_found:
-        messages = {
-            'Қазақша': (
-                "Сіз таңдаған әуен дайын! 🎧✨ Тыңдаңыз да, ләззат алыңыз! "
-                "Мен әрқашан сіздің музыкалық серігіңізбін! 🫶🎶\n"
-                "Сізге әрқашан көмектесу маған ләззат береді 🖤"
-            ),
-            'Русский': (
-                "Ваша выбранная песня готова! 🎧✨ Наслаждайтесь каждой нотой! "
-                "Я всегда ваш музыкальный спутник! 🫶🎶\n"
-                "Помогать вам — это для меня удовольствие 🖤"
-            ),
-            'English': (
-                "Your selected song is ready! 🎧✨ Enjoy every beat! "
-                "I’m always your musical companion! 🫶🎶\n"
-                "Helping you is always a pleasure for me 🖤"
-            )
-        }
-    else:
-        messages = {
-            'Қазақша': (
-                "Өкінішке орай, бұл әнді таба алмадым.🥲\n"
-                "Авторлық құқықтар мен басқа да шектеулер себепті, немесе басқа әуен іздеп көріңіз! "
-                "Әр қашан сізге көмектесуге дайынмын 🎶✨🫂"
-            ),
-            'Русский': (
-                "К сожалению, не удалось найти эту песню.🥲\n"
-                "Из-за авторских прав и других ограничений, попробуйте найти другую песню! "
-                "Я всегда готов помочь вам 🎶✨🫂"
-            ),
-            'English': (
-                "Sorry, I couldn't find this song.🥲\n"
-                "Due to copyright and other restrictions, try searching for another song! "
-                "I'm always here to help you 🎶✨🫂"
-            )
-        }
-    return messages.get(language, "Тіл анықталмады")
+FOUND_MESSAGES = {
+    'kk': "Сіз таңдаған әуен дайын! 🎧✨ Тыңдаңыз да, ләззат алыңыз! Мен әрқашан сіздің музыкалық серігіңізбін! 🫶🎶\nСізге әрқашан көмектесу маған ләззат береді 🖤",
+    'ru': "Ваша песня готова! 🎧✨ Слушайте и наслаждайтесь! Я всегда ваш музыкальный спутник! 🫶🎶\nПомогать вам — это моё удовольствие 🖤",
+    'en': "Your song is ready! 🎧✨ Listen and enjoy! I'm always your music companion! 🫶🎶\nHelping you is my pleasure 🖤"
+}
+
+NOT_FOUND_MESSAGES = {
+    'kk': "Өкінішке орай, бұл әнді таба алмадым.🥲\nАвторлық құқықтар мен басқа да шектеулер себепті, немесе басқа әуен іздеп көріңіз! Әр қашан сізге көмектесуге дайынмын 🎶✨🫂",
+    'ru': "Извините, не удалось найти эту песню.🥲\nВозможно, из-за авторских прав или других ограничений. Попробуйте найти другую песню! Я всегда готов помочь! 🎶✨🫂",
+    'en': "Sorry, I couldn't find this song.🥲\nIt might be due to copyright restrictions or other limitations. Try finding another song! I'm always here to help! 🎶✨🫂"
+}
 
 user_lang = {}  # user_id: 'kk' or 'ru' or 'en'
 
@@ -83,15 +56,20 @@ def handle_music_request(update: Update, context: CallbackContext):
         update.message.reply_text("Алдымен тілді таңдаңыз! / Сначала выберите язык! / Please select a language first!")
         return
 
-    # Мұнда нақты іздеу логикасы қосылады. Әзірше жай жауап:
-    song_found = False  # Бұл тек тест үшін, нақты іздеу логикасы қосу қажет
-    response = get_song_response(song_found, lang_code)
-    update.message.reply_text(response)
+    # Checking if user is trying to send media (audio or photo)
+    if update.message.audio or update.message.photo:
+        update.message.reply_text("Мен тек мәтіндермен жұмыс істей аламын! 🚫🎶")
+        return
 
-def block_media(update: Update, context: CallbackContext):
-    # Аудио, фото, видео және басқа медиа жіберілгенде оларды жою
-    if update.message.audio or update.message.photo or update.message.video or update.message.voice:
-        update.message.delete()
+    song_name = update.message.text.strip()
+
+    # Here you can implement song search logic
+    song_found = False  # Assume song not found for now
+    
+    if song_found:
+        update.message.reply_text(FOUND_MESSAGES[lang_code])
+    else:
+        update.message.reply_text(NOT_FOUND_MESSAGES[lang_code])
 
 def main():
     updater = Updater(TOKEN, use_context=True)
@@ -100,9 +78,6 @@ def main():
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(MessageHandler(Filters.text & Filters.regex('^(🇰🇿 Қазақша|🇷🇺 Русский|🇬🇧 English)$'), handle_language_selection))
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_music_request))
-
-    # Медиа хабарламаларға шектеу қою
-    dp.add_handler(MessageHandler(Filters.photo | Filters.audio | Filters.video | Filters.voice, block_media))
 
     updater.start_polling()
     updater.idle()
