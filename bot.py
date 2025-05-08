@@ -1,70 +1,40 @@
 import os
-import yt_dlp
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters, CallbackContext
 from yt_dlp.utils import DownloadError
-from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from telegram.ext import (
-    Updater, CommandHandler, MessageHandler, Filters,
-    CallbackContext, ConversationHandler
-)
+import yt_dlp
 
-# Боттың токені (өзіңдікі)
+# Сіздің бот токеніңіз
 TOKEN = "7302516914:AAFf7O9szcJD5GZGSsSs3TuyHdyvKhF8zN8"
 
-# Conversation этаптары
-LANGUAGE, SEARCH = range(2)
-
-# Әр қолданушының тілі сақталады
-user_languages = {}
-
-# Көптілді хабарламалар
-MESSAGES = {
-    'kz': {
-        'start': "Сәлем! Мен Tyn’daMusicBot.\nТілді таңдаңыз:",
-        'choose': "Қандай ән жүктейін?",
-        'downloading': "Іздеп жатырмын: «{}»…",
-        'error': "Қате шықты: {}",
-        'limit': "Бұл әнді жүктеу мүмкін емес. Басқа ән жазып көріңіз.",
-    },
-    'ru': {
-        'start': "Привет! Я Tyn’daMusicBot.\nВыберите язык:",
-        'choose': "Какую песню хотите скачать?",
-        'downloading': "Ищу: «{}»…",
-        'error': "Произошла ошибка: {}",
-        'limit': "Невозможно скачать эту песню. Попробуйте другую.",
-    },
-    'en': {
-        'start': "Hi! I'm Tyn’daMusicBot.\nChoose your language:",
-        'choose': "What song do you want?",
-        'downloading': "Searching: «{}»…",
-        'error': "An error occurred: {}",
-        'limit': "Can't download this song. Try another one.",
-    }
-}
-
-
+# Қарсы алу хабарламасы және тіл таңдау
 def start(update: Update, context: CallbackContext):
-    reply_keyboard = [['🇰🇿 Қазақша', '🇷🇺 Русский', '🇬🇧 English']]
-    update.message.reply_text(
-        "Сәлем! Hello!\nТілді таңдаңыз / Выберите язык / Choose your language:",
-        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True, resize_keyboard=True)
-    )
-    return LANGUAGE
+    keyboard = [
+        [InlineKeyboardButton("Қазақша 🇰🇿", callback_data='kazakh')],
+        [InlineKeyboardButton("Русский 🇷🇺", callback_data='russian')],
+        [InlineKeyboardButton("English 🇺🇸", callback_data='english')],
+        [InlineKeyboardButton("O‘zbekcha 🇺🇿", callback_data='uzbek')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    update.message.reply_text("Tyn’da Music Bot-қа қош келдің! Саған қай тілде сөйлескен ыңғайлы?", reply_markup=reply_markup)
 
+# Тілді таңдау және жауап беру
+def button(update: Update, context: CallbackContext):
+    query = update.callback_query
+    language = query.data
 
-def choose_language(update: Update, context: CallbackContext):
-    lang_text = update.message.text
-    if 'Қазақша' in lang_text:
-        user_languages[update.effective_user.id] = 'kz'
-    elif 'Русский' in lang_text:
-        user_languages[update.effective_user.id] = 'ru'
-    else:
-        user_languages[update.effective_user.id] = 'en'
+    if language == 'kazakh':
+        query.edit_message_text(text="Сәлем! Қалай көмек көрсете аламын?")
+    elif language == 'russian':
+        query.edit_message_text(text="Привет! Чем могу помочь?")
+    elif language == 'english':
+        query.edit_message_text(text="Hello! How can I help you?")
+    elif language == 'uzbek':
+        query.edit_message_text(text="Salom! Yordam bera olishim mumkinmi?")
+    
+    query.message.reply_text("Енді маған әннің атын жазыңыз, мен оны іздеп тауып беремін.")
 
-    lang = user_languages[update.effective_user.id]
-    update.message.reply_text(MESSAGES[lang]['choose'], reply_markup=ReplyKeyboardRemove())
-    return SEARCH
-
-
+# Ән жүктеу логикасы
 def download_audio(query: str) -> str:
     """YouTube-тан аудио жүктеп, 'song.mp3' атымен қайтарады."""
     ydl_opts = {
@@ -82,13 +52,10 @@ def download_audio(query: str) -> str:
         info = ydl.extract_info(f"ytsearch:{query}", download=True)
         return "song.mp3"
 
-
+# Ән сұрауы және аудио жіберу
 def handle_message(update: Update, context: CallbackContext):
-    user_id = update.effective_user.id
-    lang = user_languages.get(user_id, 'kz')  # Егер жоқ болса, қазақша бола береді
     query = update.message.text.strip()
-
-    update.message.reply_text(MESSAGES[lang]['downloading'].format(query))
+    update.message.reply_text(f"Іздеймін: «{query}»…")
     try:
         file_path = download_audio(query)
         with open(file_path, 'rb') as f:
@@ -96,30 +63,25 @@ def handle_message(update: Update, context: CallbackContext):
         os.remove(file_path)
     except DownloadError as e:
         if 'Sign in to confirm you’re not a bot' in str(e):
-            update.message.reply_text(MESSAGES[lang]['limit'])
+            update.message.reply_text(
+                "Кешіріңіз, бұл ән шектеулі немесе авторландырылған контент болғандықтан жүктелмейді.\n"
+                "Өтінемін, басқа әннің атын жазыңыз."
+            )
         else:
-            update.message.reply_text(MESSAGES[lang]['error'].format(e))
+            update.message.reply_text(f"Таңғадамалы қате шықты: {e}")
     except Exception as e:
-        update.message.reply_text(MESSAGES[lang]['error'].format(e))
-
+        update.message.reply_text(f"Өзге қате: {e}")
 
 def main():
     updater = Updater(TOKEN, use_context=True)
     dp = updater.dispatcher
 
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
-        states={
-            LANGUAGE: [MessageHandler(Filters.text & ~Filters.command, choose_language)],
-            SEARCH: [MessageHandler(Filters.text & ~Filters.command, handle_message)],
-        },
-        fallbacks=[CommandHandler("start", start)],
-    )
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CallbackQueryHandler(button))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
-    dp.add_handler(conv_handler)
     updater.start_polling()
     updater.idle()
-
 
 if __name__ == "__main__":
     main()
