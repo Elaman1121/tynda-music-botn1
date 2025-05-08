@@ -1,101 +1,68 @@
-from telegram import Update
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
-TOKEN = "7302516914:AAFf7O9szcJD5GZGSsSs3TuyHdyvKhF8zN8"  # Сіздің токеніңіз
+TOKEN = "7302516914:AAFf7O9szcJD5GZGSsSs3TuyHdyvKhF8zN8"
 
-# Тілдер мен олардың флагтары
-languages = [
-    ('Қазақша', '🇰🇿'),
-    ('Русский', '🇷🇺'),
-    ('English', '🇬🇧')
-]
+LANGUAGES = {
+    '🇰🇿 Қазақша': 'kk',
+    '🇷🇺 Русский': 'ru',
+    '🇬🇧 English': 'en'
+}
 
-# Сәлемдесу хабарламасы
+GREETINGS = {
+    'kk': "Сәлем, {name}! 👋\nМен — Tyn’da Music Bot. Сізді көргеніме қуаныштымын! ☺️\nМузыка әлемінде бірге сапар шегейік 🎶 — қалаған әніңізді жазыңыз, мен бірден тауып беремін! 🔍",
+    'ru': "Привет, {name}! 👋\nЯ — Tyn’da Music Bot. Рад вас видеть! ☺️\nОтправьте название песни, и я сразу найду её для вас! 🎶",
+    'en': "Hello, {name}! 👋\nI’m Tyn’da Music Bot. Happy to see you! ☺️\nTell me the name of the song and I’ll find it for you instantly! 🎶"
+}
+
+FOUND_MESSAGES = {
+    'kk': "Сіз таңдаған әуен дайын! 🎧✨ Тыңдаңыз да, ләззат алыңыз! Мен әрқашан сіздің музыкалық серігіңізбін! 🫶🎶\nСізге әрқашан көмектесу маған ләззат береді 🖤",
+    'ru': "Ваша песня готова! 🎧✨ Слушайте и наслаждайтесь! Я всегда ваш музыкальный спутник! 🫶🎶\nПомогать вам — это моё удовольствие 🖤",
+    'en': "Your song is ready! 🎧✨ Listen and enjoy! I'm always your music companion! 🫶🎶\nHelping you is my pleasure 🖤"
+}
+
+user_lang = {}  # user_id: 'kk' or 'ru' or 'en'
+
 def start(update: Update, context: CallbackContext):
-    user_name = update.message.from_user.first_name
-    # Тек тілді таңдау экранын көрсету
-    update.message.reply_text(
-        f"Сәлем, {user_name}! 👋\n"
-        "Мен — Tyn’da Music Bot. Сізді көргеніме қуаныштымын! ☺️\n"
-        "Музыка әлемінде бірге сапар шегейік 🎶 — қалаған әніңізді айтыңыз, мен лезде тауып беремін! 🔍\n"
-        "Сізбен жұмыс істеуге дайынмын, қай тілде сөйлескіңіз келеді? 🎧"
-    )
-    # Тіл таңдауды сұрау
-    keyboard = [[f"{flag} {language}" for language, flag in languages]]
-    reply_markup = {'keyboard': keyboard, 'one_time_keyboard': True, 'resize_keyboard': True}
-    update.message.reply_text("Тілді таңдаңыз:", reply_markup=reply_markup)
+    user_id = update.message.from_user.id
+    user_lang.pop(user_id, None)  # reset previous language
+    keyboard = [[key for key in LANGUAGES]]
+    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+    update.message.reply_text("Тілді таңдаңыз / Выберите язык / Select language:", reply_markup=reply_markup)
 
-# Тіл таңдау
-def handle_message(update: Update, context: CallbackContext):
-    query = update.message.text.strip()
-    for language, flag in languages:
-        if f"{flag} {language}" == query:
-            # Тілді сақтап, оның ішінен жауап қайтарамыз
-            context.user_data['language'] = language
-            language_responses = {
-                'Қазақша': "Сіз тіл ретінде Қазақшаны таңдадыңыз!",
-                'Русский': "Вы выбрали русский язык!",
-                'English': "You selected English language!"
-            }
-            update.message.reply_text(language_responses.get(language, "Тіл таңдалмады"))
-            break
+def handle_language_selection(update: Update, context: CallbackContext):
+    lang_key = update.message.text
+    user_id = update.message.from_user.id
+    name = update.message.from_user.first_name
+
+    if lang_key in LANGUAGES:
+        lang_code = LANGUAGES[lang_key]
+        user_lang[user_id] = lang_code
+        update.message.reply_text(GREETINGS[lang_code].format(name=name), reply_markup=ReplyKeyboardRemove())
     else:
-        update.message.reply_text("Таңдауды дұрыс енгізіңіз!")
+        update.message.reply_text("Тілді дұрыс таңдаңыз / Выберите язык правильно / Choose a valid language")
 
-# Музыка сұрау
-def music_request(update: Update, context: CallbackContext):
-    # Тілді таңдаған соң, әнді іздеу мүмкіндігі беріледі
-    if 'language' in context.user_data:
-        language = context.user_data['language']
-        
-        # Тіл бойынша хабарламалар
-        music_messages = {
-            'Қазақша': "Қалаған әніңіздің атын жазыңыз! 🎶",
-            'Русский': "Напишите название песни! 🎶",
-            'English': "Write the name of the song! 🎶"
-        }
-        update.message.reply_text(music_messages.get(language, "Тіл таңдалмады"))
-    else:
-        update.message.reply_text("Тіл таңдауды ұмытпаңыз! Тілді таңдап алғаннан кейін мен сізге ән іздеуге көмектесемін.")
+def handle_music_request(update: Update, context: CallbackContext):
+    user_id = update.message.from_user.id
+    lang_code = user_lang.get(user_id)
 
-# Ән тапқан соңғы хабарлама
-def song_found(update: Update, context: CallbackContext):
-    if 'language' in context.user_data:
-        language = context.user_data['language']
-        
-        song_messages = {
-            'Қазақша': "Сіз таңдаған әуен дайын! 🎧✨ Тыңдаңыз да, ләззат алыңыз! Мен әрқашан сіздің музыкалық серігіңізбін! 🫶🎶",
-            'Русский': "Выбранная вами песня готова! 🎧✨ Слушайте и наслаждайтесь! Я всегда ваш музыкальный спутник! 🫶🎶",
-            'English': "The song you selected is ready! 🎧✨ Listen and enjoy! I’m always your musical companion! 🫶🎶"
-        }
-        update.message.reply_text(song_messages.get(language, "Тіл таңдалмады"))
-    else:
-        update.message.reply_text("Тіл таңдауды ұмытпаңыз!")
+    if not lang_code:
+        update.message.reply_text("Алдымен тілді таңдаңыз! / Сначала выберите язык! / Please select a language first!")
+        return
 
-# Қорытынды хабарлама
-def thank_you(update: Update, context: CallbackContext):
-    if 'language' in context.user_data:
-        language = context.user_data['language']
-        
-        thank_you_messages = {
-            'Қазақша': "Сізге әрқашан көмектесу маған ләззат береді 🖤",
-            'Русский': "Помогать вам — это всегда удовольствие для меня 🖤",
-            'English': "Helping you is always a pleasure for me 🖤"
-        }
-        update.message.reply_text(thank_you_messages.get(language, "Тіл таңдалмады"))
+    # Мұнда нақты іздеу логикасы қосылады. Әзірше жай жауап:
+    update.message.reply_text(FOUND_MESSAGES[lang_code])
 
 def main():
-    updater = Updater(TOKEN)
+    updater = Updater(TOKEN, use_context=True)
     dp = updater.dispatcher
 
     dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, music_request))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, song_found))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, thank_you))
+    dp.add_handler(MessageHandler(Filters.text & Filters.regex('^(🇰🇿 Қазақша|🇷🇺 Русский|🇬🇧 English)$'), handle_language_selection))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_music_request))
 
     updater.start_polling()
     updater.idle()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
