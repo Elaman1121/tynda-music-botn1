@@ -1,118 +1,98 @@
-import os
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, MessageHandler, Filters, CallbackContext
-from yt_dlp.utils import DownloadError
-import yt_dlp
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
-# Сіздің бот токеніңіз
-TOKEN = "7302516914:AAFf7O9szcJD5GZGSsSs3TuyHdyvKhF8zN8"
+TOKEN = "7302516914:AAFf7O9szcJD5GZGSsSs3TuyHdyvKhF8zN8"  # Сіздің токеніңіз
 
-# Қарсы алу хабарламасы және тіл таңдау
+# Тілдер мен олардың флагтары
+languages = [
+    ('Қазақша', '🇰🇿'),
+    ('Русский', '🇷🇺'),
+    ('English', '🇬🇧')
+]
+
+# Сәлемдесу хабарламасы
 def start(update: Update, context: CallbackContext):
-    # Тіл таңдау үшін батырмаларды жасау (бір қатарда)
-    keyboard = [
-        [
-            InlineKeyboardButton("Қазақша 🇰🇿", callback_data='kazakh'),
-            InlineKeyboardButton("Русский 🇷🇺", callback_data='russian'),
-            InlineKeyboardButton("English 🇺🇸", callback_data='english'),
-            InlineKeyboardButton("O‘zbekcha 🇺🇿", callback_data='uzbek')
-        ]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
+    user_name = update.message.from_user.first_name
+    # Тек тілді таңдау экранын көрсету
+    update.message.reply_text(
+        f"Сәлем, {user_name}! 👋\n"
+        "Мен — Tyn’da Music Bot. Сізді көргеніме қуаныштымын! ☺️\n"
+        "Музыка әлемінде бірге сапар шегейік 🎶 — қалаған әніңізді айтыңыз, мен лезде тауып беремін! 🔍\n"
+        "Сізбен жұмыс істеуге дайынмын, қай тілде сөйлескіңіз келеді? 🎧"
+    )
     # Тіл таңдауды сұрау
-    update.message.reply_text("Tyn’da Music Bot-қа қош келдің! Саған қай тілде сөйлескен ыңғайлы?", reply_markup=reply_markup)
-    
-    # Қолданушы тіл таңдағанша хабарлама жаза алмайды
-    context.user_data['language_selected'] = False
+    keyboard = [[f"{flag} {language}" for language, flag in languages]]
+    reply_markup = {'keyboard': keyboard, 'one_time_keyboard': True, 'resize_keyboard': True}
+    update.message.reply_text("Тілді таңдаңыз:", reply_markup=reply_markup)
 
-# Тілді таңдау және жауап беру
-def button(update: Update, context: CallbackContext):
-    query = update.callback_query
-    language = query.data
-
-    # Тіл таңдалғаннан кейін, хабарлама жазуға рұқсат береміз
-    context.user_data['language_selected'] = True
-    context.user_data['language'] = language  # Тілді сақтап қойамыз
-
-    # Тілді таңдау бойынша жауап беру
-    if language == 'kazakh':
-        query.edit_message_text(text="Сәлем! Қалай көмек көрсете аламын?")
-    elif language == 'russian':
-        query.edit_message_text(text="Привет! Чем могу помочь?")
-    elif language == 'english':
-        query.edit_message_text(text="Hello! How can I help you?")
-    elif language == 'uzbek':
-        query.edit_message_text(text="Salom! Yordam bera olishim mumkinmi?")
-    
-    query.message.reply_text("Енді маған әннің атын жазыңыз, мен оны іздеп тауып беремін.")
-
-# Ән жүктеу логикасы
-def download_audio(query: str) -> str:
-    """YouTube-тан аудио жүктеп, 'song.mp3' атымен қайтарады."""
-    ydl_opts = {
-        'format': 'bestaudio/best',
-        'outtmpl': 'song.%(ext)s',
-        'noplaylist': True,
-        'quiet': True,
-        'postprocessors': [{
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'mp3',
-            'preferredquality': '320',
-        }],
-    }
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(f"ytsearch:{query}", download=True)
-        return "song.mp3"
-
-# Ән сұрауы және аудио жіберу
+# Тіл таңдау
 def handle_message(update: Update, context: CallbackContext):
-    # Тіл таңдалғанын тексеру
-    if not context.user_data.get('language_selected', False):
-        update.message.reply_text("Сізге алдын ала тіл таңдау керек. Өтінемін, тіл таңдаңыз.")
-        return
-
     query = update.message.text.strip()
+    for language, flag in languages:
+        if f"{flag} {language}" == query:
+            # Тілді сақтап, оның ішінен жауап қайтарамыз
+            context.user_data['language'] = language
+            language_responses = {
+                'Қазақша': "Сіз тіл ретінде Қазақшаны таңдадыңыз!",
+                'Русский': "Вы выбрали русский язык!",
+                'English': "You selected English language!"
+            }
+            update.message.reply_text(language_responses.get(language, "Тіл таңдалмады"))
+            break
+    else:
+        update.message.reply_text("Таңдауды дұрыс енгізіңіз!")
 
-    # Пайдаланушының таңдаған тілінде жауап беру
-    language = context.user_data.get('language', 'kazakh')  # Әдепкі тіл қазақша
+# Музыка сұрау
+def music_request(update: Update, context: CallbackContext):
+    # Тілді таңдаған соң, әнді іздеу мүмкіндігі беріледі
+    if 'language' in context.user_data:
+        language = context.user_data['language']
+        
+        # Тіл бойынша хабарламалар
+        music_messages = {
+            'Қазақша': "Қалаған әніңіздің атын жазыңыз! 🎶",
+            'Русский': "Напишите название песни! 🎶",
+            'English': "Write the name of the song! 🎶"
+        }
+        update.message.reply_text(music_messages.get(language, "Тіл таңдалмады"))
+    else:
+        update.message.reply_text("Тіл таңдауды ұмытпаңыз! Тілді таңдап алғаннан кейін мен сізге ән іздеуге көмектесемін.")
 
-    if language == 'kazakh':
-        update.message.reply_text(f"Іздеймін: «{query}»…")
-    elif language == 'russian':
-        update.message.reply_text(f"Ищу: «{query}»…")
-    elif language == 'english':
-        update.message.reply_text(f"Searching: «{query}»...")
-    elif language == 'uzbek':
-        update.message.reply_text(f"Qidiryapman: «{query}»...")
+# Ән тапқан соңғы хабарлама
+def song_found(update: Update, context: CallbackContext):
+    if 'language' in context.user_data:
+        language = context.user_data['language']
+        
+        song_messages = {
+            'Қазақша': "Сіз таңдаған әуен дайын! 🎧✨ Тыңдаңыз да, ләззат алыңыз! Мен әрқашан сіздің музыкалық серігіңізбін! 🫶🎶",
+            'Русский': "Выбранная вами песня готова! 🎧✨ Слушайте и наслаждайтесь! Я всегда ваш музыкальный спутник! 🫶🎶",
+            'English': "The song you selected is ready! 🎧✨ Listen and enjoy! I’m always your musical companion! 🫶🎶"
+        }
+        update.message.reply_text(song_messages.get(language, "Тіл таңдалмады"))
+    else:
+        update.message.reply_text("Тіл таңдауды ұмытпаңыз!")
 
-    try:
-        file_path = download_audio(query)
-        with open(file_path, 'rb') as f:
-            update.message.reply_audio(audio=f)
-        os.remove(file_path)
-    except DownloadError as e:
-        if 'Sign in to confirm you’re not a bot' in str(e):
-            if language == 'kazakh':
-                update.message.reply_text("Кешіріңіз, бұл ән шектеулі немесе авторландырылған контент болғандықтан жүктелмейді.\nӨтінемін, басқа әннің атын жазыңыз.")
-            elif language == 'russian':
-                update.message.reply_text("Извините, это видео не доступно для скачивания, так как оно ограничено или защищено авторскими правами.\nПожалуйста, напишите другое название.")
-            elif language == 'english':
-                update.message.reply_text("Sorry, this video cannot be downloaded because it is restricted or copyrighted.\nPlease provide another song name.")
-            elif language == 'uzbek':
-                update.message.reply_text("Kechirasiz, bu video yuklab olinmaydi, chunki u cheklangan yoki mualliflik huquqi bilan himoyalangan.\nIltimos, boshqa qo'shiq nomini kiriting.")
-        else:
-            update.message.reply_text(f"Қате шықты: {e}")
-    except Exception as e:
-        update.message.reply_text(f"Өзге қате: {e}")
+# Қорытынды хабарлама
+def thank_you(update: Update, context: CallbackContext):
+    if 'language' in context.user_data:
+        language = context.user_data['language']
+        
+        thank_you_messages = {
+            'Қазақша': "Сізге әрқашан көмектесу маған ләззат береді 🖤",
+            'Русский': "Помогать вам — это всегда удовольствие для меня 🖤",
+            'English': "Helping you is always a pleasure for me 🖤"
+        }
+        update.message.reply_text(thank_you_messages.get(language, "Тіл таңдалмады"))
 
 def main():
-    updater = Updater(TOKEN, use_context=True)
+    updater = Updater(TOKEN)
     dp = updater.dispatcher
 
     dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CallbackQueryHandler(button))
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, music_request))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, song_found))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, thank_you))
 
     updater.start_polling()
     updater.idle()
