@@ -33,6 +33,7 @@ def button(update: Update, context: CallbackContext):
 
     # Тіл таңдалғаннан кейін, хабарлама жазуға рұқсат береміз
     context.user_data['language_selected'] = True
+    context.user_data['language'] = language  # Тілді сақтап қойамыз
 
     # Тілді таңдау бойынша жауап беру
     if language == 'kazakh':
@@ -72,7 +73,19 @@ def handle_message(update: Update, context: CallbackContext):
         return
 
     query = update.message.text.strip()
-    update.message.reply_text(f"Іздеймін: «{query}»…")
+
+    # Пайдаланушының таңдаған тілінде жауап беру
+    language = context.user_data.get('language', 'kazakh')  # Әдепкі тіл қазақша
+
+    if language == 'kazakh':
+        update.message.reply_text(f"Іздеймін: «{query}»…")
+    elif language == 'russian':
+        update.message.reply_text(f"Ищу: «{query}»…")
+    elif language == 'english':
+        update.message.reply_text(f"Searching: «{query}»...")
+    elif language == 'uzbek':
+        update.message.reply_text(f"Qidiryapman: «{query}»...")
+
     try:
         file_path = download_audio(query)
         with open(file_path, 'rb') as f:
@@ -80,12 +93,16 @@ def handle_message(update: Update, context: CallbackContext):
         os.remove(file_path)
     except DownloadError as e:
         if 'Sign in to confirm you’re not a bot' in str(e):
-            update.message.reply_text(
-                "Кешіріңіз, бұл ән шектеулі немесе авторландырылған контент болғандықтан жүктелмейді.\n"
-                "Өтінемін, басқа әннің атын жазыңыз."
-            )
+            if language == 'kazakh':
+                update.message.reply_text("Кешіріңіз, бұл ән шектеулі немесе авторландырылған контент болғандықтан жүктелмейді.\nӨтінемін, басқа әннің атын жазыңыз.")
+            elif language == 'russian':
+                update.message.reply_text("Извините, это видео не доступно для скачивания, так как оно ограничено или защищено авторскими правами.\nПожалуйста, напишите другое название.")
+            elif language == 'english':
+                update.message.reply_text("Sorry, this video cannot be downloaded because it is restricted or copyrighted.\nPlease provide another song name.")
+            elif language == 'uzbek':
+                update.message.reply_text("Kechirasiz, bu video yuklab olinmaydi, chunki u cheklangan yoki mualliflik huquqi bilan himoyalangan.\nIltimos, boshqa qo'shiq nomini kiriting.")
         else:
-            update.message.reply_text(f"Таңғадамалы қате шықты: {e}")
+            update.message.reply_text(f"Қате шықты: {e}")
     except Exception as e:
         update.message.reply_text(f"Өзге қате: {e}")
 
