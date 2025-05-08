@@ -32,9 +32,9 @@ user_lang = {}  # user_id: 'kk' or 'ru' or 'en'
 def start(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     user_lang.pop(user_id, None)  # reset previous language
-    keyboard = [[key for key in LANGUAGES]]
+    keyboard = [[key for key in LANGUAGES]]  # Keybord in first row
     reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=False, resize_keyboard=True)
-    update.message.reply_text(" ", reply_markup=reply_markup)  # бос хабарлама
+    update.message.reply_text("1. Тілді таңдаңыз / Выберите язык / Select language:", reply_markup=reply_markup)
 
 def handle_language_selection(update: Update, context: CallbackContext):
     lang_key = update.message.text
@@ -46,28 +46,29 @@ def handle_language_selection(update: Update, context: CallbackContext):
         user_lang[user_id] = lang_code
         update.message.reply_text(GREETINGS[lang_code].format(name=name), reply_markup=ReplyKeyboardRemove())
     else:
-        # Егер басқа хабарлама келсе — қайтадан тек тіл кнопкасын көрсет
-        keyboard = [[key for key in LANGUAGES]]
-        reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=False, resize_keyboard=True)
-        update.message.reply_text(" ", reply_markup=reply_markup)
+        update.message.reply_text("Тілді дұрыс таңдаңыз / Выберите язык правильно / Choose a valid language")
 
 def handle_music_request(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
     lang_code = user_lang.get(user_id)
 
     if not lang_code:
-        keyboard = [[key for key in LANGUAGES]]
+        # If no language is selected
+        keyboard = [[key for key in LANGUAGES]]  # Keybord in first row
         reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=False, resize_keyboard=True)
-        update.message.reply_text(" ", reply_markup=reply_markup)
+        update.message.reply_text("2. Алдымен тілді таңдаңыз! / Сначала выберите язык! / Please select a language first!", reply_markup=reply_markup)
         return
 
+    # Checking if user is trying to send media (audio or photo)
     if update.message.audio or update.message.photo:
         update.message.reply_text("Мен тек мәтіндермен жұмыс істей аламын! 🚫🎶")
         return
 
     song_name = update.message.text.strip()
-    song_found = False
 
+    # Here you can implement song search logic
+    song_found = False  # Assume song not found for now
+    
     if song_found:
         update.message.reply_text(FOUND_MESSAGES[lang_code])
     else:
