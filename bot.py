@@ -111,7 +111,8 @@ async def invalid_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(MESSAGES['invalid_input'][lang])
 
 def main():
-    TOKEN = "7302516914:AAFf7O9szcJD5GZGSsSs3TuyHdyvKhF8zN8"  # Токенді осы жолға жаздым
+    # Токеніңізді мұнда қосыңыз
+    TOKEN = '7302516914:AAFf7O9szcJD5GZGSsSs3TuyHdyvKhF8zN8'
     app = Application.builder().token(TOKEN).build()
 
     conv_handler = ConversationHandler(
