@@ -18,21 +18,15 @@ GREETINGS = {
 }
 
 FOUND_MESSAGES = {
-    'kk': "Сіз таңдаған әуен дайын! 🎧✨ Тыңдаңыз да, ләззат алыңыз! Мен әрқашан сіздің музыкалық серігіңізбін! 🫶🎶",
-    'ru': "Ваша песня готова! 🎧✨ Слушайте и наслаждайтесь! Я всегда ваш музыкальный спутник! 🫶🎶",
-    'en': "Your song is ready! 🎧✨ Listen and enjoy! I'm always your music companion! 🫶🎶"
+    'kk': "Сіз таңдаған әуен дайын! 🎧✨ Тыңдаңыз да, ләззат алыңыз! Мен әрқашан сіздің музыкалық серігіңізбін! 🫶🎶\nСізге әрқашан көмектесу маған ләззат береді 🖤",
+    'ru': "Ваша песня готова! 🎧✨ Слушайте и наслаждайтесь! Я всегда ваш музыкальный спутник! 🫶🎶\nПомогать вам — это моё удовольствие 🖤",
+    'en': "Your song is ready! 🎧✨ Listen and enjoy! I'm always your music companion! 🫶🎶\nHelping you is my pleasure 🖤"
 }
 
 NOT_FOUND_MESSAGES = {
     'kk': "Өкінішке орай, бұл әнді таба алмадым.🥲\nАвторлық құқықтар мен басқа да шектеулер себепті, немесе басқа әуен іздеп көріңіз! Әр қашан сізге көмектесуге дайынмын 🎶✨🫂",
     'ru': "Извините, не удалось найти эту песню.🥲\nВозможно, из-за авторских прав или других ограничений. Попробуйте найти другую песню! Я всегда готов помочь! 🎶✨🫂",
     'en': "Sorry, I couldn't find this song.🥲\nIt might be due to copyright restrictions or other limitations. Try finding another song! I'm always here to help! 🎶✨🫂"
-}
-
-SEARCHING_MESSAGES = {
-    'kk': "Ән ізделіп жатыр... Күте тұрыңыз.",
-    'ru': "Поиск песни... Пожалуйста, подождите.",
-    'en': "Song is being searched... Please wait."
 }
 
 user_lang = {}  # user_id: 'kk' or 'ru' or 'en'
@@ -61,12 +55,13 @@ def download_audio(query: str, file_name: str = "song.mp3") -> str or None:
         'format': 'bestaudio/best',
         'outtmpl': file_name,
         'noplaylist': True,
-        'quiet': True,  # керек болса False қойып лог қарауға болады
+        'quiet': True,
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
-            'preferredquality': '320',
+            'preferredquality': '320',  # 320 kbps сапасы
         }],
+        'cookiefile': 'cookies.txt',  # cookies.txt файлын қосу
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -82,7 +77,7 @@ def handle_music_request(update: Update, context: CallbackContext):
     lang_code = user_lang.get(user_id)
 
     if not lang_code:
-        keyboard = [[key for key in LANGUAGES]]
+        keyboard = [[key for key in LANGUAGES]]  # Keybord in first row
         reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=False, resize_keyboard=True)
         update.message.reply_text("2. Алдымен тілді таңдаңыз! / Сначала выберите язык! / Please select a language first!", reply_markup=reply_markup)
         return
@@ -92,7 +87,7 @@ def handle_music_request(update: Update, context: CallbackContext):
         return
 
     song_name = update.message.text.strip()
-    update.message.reply_text(SEARCHING_MESSAGES[lang_code])
+    update.message.reply_text("Ән ізделіп жатыр... Күте тұрыңыз.")
 
     audio_file = download_audio(song_name)
 
