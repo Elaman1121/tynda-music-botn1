@@ -2,106 +2,132 @@ import os
 import logging
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import (
-    Application,
-    CommandHandler,
-    MessageHandler,
-    ConversationHandler,
-    ContextTypes,
-    filters,
+    Application, CommandHandler, MessageHandler, filters,
+    ConversationHandler, ContextTypes
 )
 from yt_dlp import YoutubeDL
 
-logging.basicConfig(level=logging.INFO)
+# Лог
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
+)
 
-TOKEN = "7302516914:AAFf7O9szcJD5GZGSsSs3TuyHdyvKhF8zN8"
-LANGUAGE = range(1)
+# Язык таңдау константалары
+LANGUAGE, AWAITING_QUERY = range(2)
 
+# Тіл таңдаулары
 LANGUAGES = {
-    "Қазақша": "kk",
-    "Русский": "ru",
-    "English": "en"
+    'Қазақша': 'kk',
+    'Русский': 'ru',
+    'English': 'en'
 }
 
+# Тілдік хабарламалар
 MESSAGES = {
-    "start": {
-        "kk": "Сәлем! Маған ән атын жазсаң, мен оны тауып берем!",
-        "ru": "Привет! Напиши название песни, и я её найду!",
-        "en": "Hi! Send me a song name and I’ll find it!"
+    'start': {
+        'kk': 'Қош келдіңіз! Тілді таңдаңыз:',
+        'ru': 'Добро пожаловать! Пожалуйста, выберите язык:',
+        'en': 'Welcome! Please select your language:'
     },
-    "searching": {
-        "kk": "Ән ізделіп жатыр... Күте тұрыңыз.",
-        "ru": "Ищу песню... Пожалуйста, подождите.",
-        "en": "Searching for the song... Please wait."
+    'waiting': {
+        'kk': 'Ән ізделіп жатыр... Күте тұрыңыз.',
+        'ru': 'Ищем песню... Пожалуйста, подождите.',
+        'en': 'Searching for the song... Please wait.'
     },
-    "not_found": {
-        "kk": "Кешір, бұл әнді таба алмадым. Басқасын көрейік.",
-        "ru": "Не удалось найти песню. Попробуйте другую.",
-        "en": "Couldn't find the song. Try another one."
+    'not_found': {
+        'kk': 'Өкінішке орай, бұл әнді таба алмадым. Басқа әуен іздеп көріңіз!',
+        'ru': 'К сожалению, я не смог найти эту песню. Попробуйте другую!',
+        'en': 'Sorry, I couldn’t find this song. Try another one!'
+    },
+    'send_song': {
+        'kk': 'Міне, сіз іздеген ән!',
+        'ru': 'Вот ваша песня!',
+        'en': 'Here is your song!'
+    },
+    'invalid_input': {
+        'kk': 'Тек мәтін жазыңыз, аудио немесе сурет жібермеңіз.',
+        'ru': 'Пожалуйста, отправьте только текст, без аудио или фото.',
+        'en': 'Please send only text, no audio or photos.'
     }
 }
 
+# Пайдаланушылардың тілін сақтау
+user_languages = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [["Қазақша", "Русский", "English"]]
-    reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
-    await update.message.reply_text("Тілді таңдаңыз / Choose language / Выберите язык:", reply_markup=reply_markup)
+    keyboard = [[key] for key in LANGUAGES.keys()]
+    await update.message.reply_text(
+        text=MESSAGES['start']['kk'],  # Қазақша қарсы алу
+        reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
+    )
     return LANGUAGE
 
-
 async def set_language(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    lang = update.message.text
-    context.user_data["lang"] = LANGUAGES.get(lang, "en")
-    await update.message.reply_text(MESSAGES["start"][context.user_data["lang"]])
-    return ConversationHandler.END
+    selected = update.message.text
+    lang_code = LANGUAGES.get(selected)
+    if not lang_code:
+        return LANGUAGE
 
+    user_languages[update.effective_user.id] = lang_code
+    await update.message.reply_text(MESSAGES['waiting'][lang_code])
+    return AWAITING_QUERY
 
-async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    lang = context.user_data.get("lang", "en")
+async def handle_song_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    lang = user_languages.get(user_id, 'en')
     query = update.message.text
 
-    await update.message.reply_text(MESSAGES["searching"][lang])
+    await update.message.reply_text(MESSAGES['waiting'][lang])
 
     ydl_opts = {
         'format': 'bestaudio/best',
-        'outtmpl': '%(title)s.%(ext)s',
+        'outtmpl': 'song.%(ext)s',
+        'cookiefile': 'cookies.txt',
+        'quiet': True,
+        'noplaylist': True,
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
-            'preferredquality': '192',
+            'preferredquality': '320',
         }],
-        'cookiefile': 'cookies.txt',
-        'quiet': True,
     }
 
     try:
         with YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(f"ytsearch:{query}", download=True)['entries'][0]
-            filename = ydl.prepare_filename(info).replace(".webm", ".mp3").replace(".m4a", ".mp3")
+            audio_path = ydl.prepare_filename(info).replace(".webm", ".mp3").replace(".m4a", ".mp3")
 
-        with open(filename, 'rb') as audio:
-            await update.message.reply_audio(audio)
-        os.remove(filename)
+        await update.message.reply_audio(audio=open(audio_path, 'rb'), caption=MESSAGES['send_song'][lang])
+        os.remove(audio_path)
+
     except Exception as e:
-        logging.error(f"Error while downloading: {e}")
-        await update.message.reply_text(MESSAGES["not_found"][lang])
+        print("Қате:", e)
+        await update.message.reply_text(MESSAGES['not_found'][lang])
 
+    return AWAITING_QUERY
+
+async def invalid_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    lang = user_languages.get(update.effective_user.id, 'en')
+    await update.message.reply_text(MESSAGES['invalid_input'][lang])
 
 def main():
-    application = Application.builder().token(TOKEN).build()
+    TOKEN = os.environ.get("BOT_TOKEN")
+    app = Application.builder().token(TOKEN).build()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
             LANGUAGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, set_language)],
+            AWAITING_QUERY: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_song_request)],
         },
         fallbacks=[],
     )
 
-    application.add_handler(conv_handler)
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+    app.add_handler(conv_handler)
+    app.add_handler(MessageHandler(~filters.TEXT, invalid_input))
 
-    application.run_polling()
+    print("Бот іске қосылды.")
+    app.run_polling()
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
