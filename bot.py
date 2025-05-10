@@ -25,7 +25,7 @@ FOUND_MESSAGES = {
 
 NOT_FOUND_MESSAGES = {
     'kk': "Өкінішке орай, бұл әнді таба алмадым.🥲\nАвторлық құқықтар мен басқа да шектеулер себепті, немесе басқа әуен іздеп көріңіз! Әр қашан сізге көмектесуге дайынмын 🎶✨🫂",
-    'ru': "Извините, не удалось найти эту песню.🥲\nВозможно, из-за авторских прав или других ограничений. Попробуйте найти другую песню! Я всегда готов помочь! 🎶✨🫂",
+    'ru': "Извините, не удалось найти эту песню.🥲\nВозможно, из-за авторских прав или других ограничений. Попробуйте найти другую песню! 🎶✨🫂",
     'en': "Sorry, I couldn't find this song.🥲\nIt might be due to copyright restrictions or other limitations. Try finding another song! I'm always here to help! 🎶✨🫂"
 }
 
@@ -55,9 +55,9 @@ def download_audio(query: str, file_name: str = "song.mp3") -> str or None:
         'format': 'bestaudio/best',
         'outtmpl': file_name,
         'noplaylist': True,
-        'quiet': False,            # Полный вывод логов
-        'verbose': True,           # Подробный режим
-        'default_search': 'ytsearch1',  # Поиск и загрузка первого результата
+        'quiet': False,
+        'verbose': True,
+        'default_search': 'ytsearch1',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
@@ -66,11 +66,20 @@ def download_audio(query: str, file_name: str = "song.mp3") -> str or None:
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        # 1) YouTube-тен іздеу
         try:
             info = ydl.extract_info(query, download=True)
+            if os.path.exists(file_name):
+                return file_name
+        except Exception:
+            pass
+
+        # 2) Егер YouTube-та табылмаса — SoundCloud-тан іздеу
+        try:
+            info = ydl.extract_info(f"scsearch1:{query}", download=True)
             return file_name if os.path.exists(file_name) else None
         except Exception as e:
-            print("Қате:", e)
+            print("Екі жерде де табылмады:", e)
             return None
 
 def handle_music_request(update: Update, context: CallbackContext):
