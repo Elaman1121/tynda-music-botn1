@@ -33,8 +33,8 @@ user_lang = {}  # user_id: 'kk' or 'ru' or 'en'
 
 def start(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
-    user_lang.pop(user_id, None)  # reset previous language
-    keyboard = [[key for key in LANGUAGES]]  # Keyboard in first row
+    user_lang.pop(user_id, None)
+    keyboard = [[key for key in LANGUAGES]]
     reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=False, resize_keyboard=True)
     update.message.reply_text("1. Тілді таңдаңыз / Выберите язык / Select language:", reply_markup=reply_markup)
 
@@ -55,18 +55,19 @@ def download_audio(query: str, file_name: str = "song.mp3") -> str or None:
         'format': 'bestaudio/best',
         'outtmpl': file_name,
         'noplaylist': True,
-        'quiet': True,
+        'quiet': False,            # Полный вывод логов
+        'verbose': True,           # Подробный режим
+        'default_search': 'ytsearch1',  # Поиск и загрузка первого результата
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
-            'preferredquality': '320',  # 320 kbps сапасы
+            'preferredquality': '320',
         }],
-        #'cookiefile': 'cookies.txt',  # cookies.txt файлын қосу
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
-            info = ydl.extract_info(f"ytsearch:{query}", download=True)
+            info = ydl.extract_info(query, download=True)
             return file_name if os.path.exists(file_name) else None
         except Exception as e:
             print("Қате:", e)
@@ -77,7 +78,7 @@ def handle_music_request(update: Update, context: CallbackContext):
     lang_code = user_lang.get(user_id)
 
     if not lang_code:
-        keyboard = [[key for key in LANGUAGES]]  # Keybord in first row
+        keyboard = [[key for key in LANGUAGES]]
         reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=False, resize_keyboard=True)
         update.message.reply_text("2. Алдымен тілді таңдаңыз! / Сначала выберите язык! / Please select a language first!", reply_markup=reply_markup)
         return
