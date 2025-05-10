@@ -57,7 +57,7 @@ def download_audio(query: str, file_name: str = "song.mp3") -> str or None:
         'noplaylist': True,
         'quiet': False,
         'verbose': True,
-        'default_search': 'ytsearch1',
+        'default_search': 'ytsearch5',  # вернуть первые 5 результатов в поиске
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
@@ -66,20 +66,27 @@ def download_audio(query: str, file_name: str = "song.mp3") -> str or None:
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        # 1) YouTube-тен іздеу
+        # 1) Список первых 5 результатов из YouTube
+        info = ydl.extract_info(query, download=False)
+        print("Search results:")
+        for i, entry in enumerate(info.get('entries', [])[:5], 1):
+            print(f"{i}. {entry.get('title')} — {entry.get('webpage_url')}")
+
+        # Попробуем скачать первый найденный
         try:
-            info = ydl.extract_info(query, download=True)
+            first = info['entries'][0]
+            ydl.download([ first['webpage_url'] ])
             if os.path.exists(file_name):
                 return file_name
-        except Exception:
-            pass
+        except Exception as e:
+            print("YouTube download error:", e)
 
-        # 2) Егер YouTube-та табылмаса — SoundCloud-тан іздеу
+        # 2) Если на YouTube не получилось — SoundCloud
         try:
-            info = ydl.extract_info(f"scsearch1:{query}", download=True)
+            info2 = ydl.extract_info(f"scsearch1:{query}", download=True)
             return file_name if os.path.exists(file_name) else None
         except Exception as e:
-            print("Екі жерде де табылмады:", e)
+            print("SoundCloud download error:", e)
             return None
 
 def handle_music_request(update: Update, context: CallbackContext):
@@ -89,7 +96,10 @@ def handle_music_request(update: Update, context: CallbackContext):
     if not lang_code:
         keyboard = [[key for key in LANGUAGES]]
         reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=False, resize_keyboard=True)
-        update.message.reply_text("2. Алдымен тілді таңдаңыз! / Сначала выберите язык! / Please select a language first!", reply_markup=reply_markup)
+        update.message.reply_text(
+            "2. Алдымен тілді таңдаңыз! / Сначала выберите язык! / Please select a language first!",
+            reply_markup=reply_markup
+        )
         return
 
     if update.message.audio or update.message.photo:
@@ -113,7 +123,10 @@ def main():
     dp = updater.dispatcher
 
     dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(MessageHandler(Filters.text & Filters.regex('^(🇰🇿 Қазақша|🇷🇺 Русский|🇬🇧 English)$'), handle_language_selection))
+    dp.add_handler(MessageHandler(
+        Filters.text & Filters.regex('^(🇰🇿 Қазақша|🇷🇺 Русский|🇬🇧 English)$'),
+        handle_language_selection
+    ))
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_music_request))
 
     updater.start_polling()
