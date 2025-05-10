@@ -29,6 +29,12 @@ NOT_FOUND_MESSAGES = {
     'en': "Sorry, I couldn't find this song.🥲\nIt might be due to copyright restrictions or other limitations. Try finding another song! I'm always here to help! 🎶✨🫂"
 }
 
+SEARCHING_MESSAGES = {
+    'kk': "Ән ізделіп жатыр... Күте тұрыңыз.",
+    'ru': "Песня ищется... Пожалуйста, подождите.",
+    'en': "Searching for the song... Please wait."
+}
+
 user_lang = {}  # user_id: 'kk' or 'ru' or 'en'
 
 def start(update: Update, context: CallbackContext):
@@ -57,31 +63,29 @@ def download_audio(query: str, file_name: str = "song.mp3") -> str or None:
         'noplaylist': True,
         'quiet': False,
         'verbose': True,
-        'default_search': 'ytsearch5',  # вернуть первые 5 результатов в поиске
+        'default_search': 'ytsearch5',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
             'preferredquality': '320',
         }],
+        'cookiefile': 'cookies.txt'
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        # 1) Список первых 5 результатов из YouTube
-        info = ydl.extract_info(query, download=False)
-        print("Search results:")
-        for i, entry in enumerate(info.get('entries', [])[:5], 1):
-            print(f"{i}. {entry.get('title')} — {entry.get('webpage_url')}")
-
-        # Попробуем скачать первый найденный
         try:
+            info = ydl.extract_info(query, download=False)
+            print("Search results:")
+            for i, entry in enumerate(info.get('entries', [])[:5], 1):
+                print(f"{i}. {entry.get('title')} — {entry.get('webpage_url')}")
+
             first = info['entries'][0]
-            ydl.download([ first['webpage_url'] ])
+            ydl.download([first['webpage_url']])
             if os.path.exists(file_name):
                 return file_name
         except Exception as e:
             print("YouTube download error:", e)
 
-        # 2) Если на YouTube не получилось — SoundCloud
         try:
             info2 = ydl.extract_info(f"scsearch1:{query}", download=True)
             return file_name if os.path.exists(file_name) else None
@@ -107,7 +111,7 @@ def handle_music_request(update: Update, context: CallbackContext):
         return
 
     song_name = update.message.text.strip()
-    update.message.reply_text("Ән ізделіп жатыр... Күте тұрыңыз.")
+    update.message.reply_text(SEARCHING_MESSAGES[lang_code])
 
     audio_file = download_audio(song_name)
 
