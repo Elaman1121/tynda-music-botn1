@@ -3,11 +3,12 @@ from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, Bot
 from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters, CallbackContext
 import yt_dlp
 import os
+import logging
 
 TOKEN = "7302516914:AAFf7O9szcJD5GZGSsSs3TuyHdyvKhF8zN8"
 bot = Bot(TOKEN)
 
-app = Flask(__name__)  # Flask сервері
+app = Flask(__name__)
 
 dispatcher = Dispatcher(bot=bot, update_queue=None, use_context=True)
 
@@ -130,5 +131,6 @@ def webhook():
 def index():
     return "Bot is running!"
 
+# Port Heroku автоматты түрде орнатады
 if __name__ == '__main__':
-    app.run(debug=False)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=False)
