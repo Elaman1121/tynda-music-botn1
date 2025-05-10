@@ -1,9 +1,15 @@
-from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from flask import Flask, request
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove, Bot
+from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters, CallbackContext
 import yt_dlp
 import os
 
 TOKEN = "7302516914:AAFf7O9szcJD5GZGSsSs3TuyHdyvKhF8zN8"
+bot = Bot(TOKEN)
+
+app = Flask(__name__)  # Flask сервері
+
+dispatcher = Dispatcher(bot=bot, update_queue=None, use_context=True)
 
 LANGUAGES = {
     '🇰🇿 Қазақша': 'kk',
@@ -12,30 +18,30 @@ LANGUAGES = {
 }
 
 GREETINGS = {
-    'kk': "Сәлем, {name}! 👋\nМен — Tyn’da Music Bot. Сізді көргеніме қуаныштымын! ☺️\nМузыка әлемінде бірге сапар шегейік 🎶 — қалаған әніңізді жазыңыз, мен бірден тауып беремін! 🔍",
-    'ru': "Привет, {name}! 👋\nЯ — Tyn’da Music Bot. Рад вас видеть! ☺️\nОтправьте название песни, и я сразу найду её для вас! 🎶",
-    'en': "Hello, {name}! 👋\nI’m Tyn’da Music Bot. Happy to see you! ☺️\nTell me the name of the song and I’ll find it for you instantly! 🎶"
+    'kk': "Сәлем, {name}! Мен — Tyn’da Music Bot...",
+    'ru': "Привет, {name}! Я — Tyn’da Music Bot...",
+    'en': "Hello, {name}! I’m Tyn’da Music Bot..."
 }
 
 FOUND_MESSAGES = {
-    'kk': "Сіз таңдаған әуен дайын! 🎧✨ Тыңдаңыз да, ләззат алыңыз! Мен әрқашан сіздің музыкалық серігіңізбін! 🫶🎶\nСізге әрқашан көмектесу маған ләззат береді 🖤",
-    'ru': "Ваша песня готова! 🎧✨ Слушайте и наслаждайтесь! Я всегда ваш музыкальный спутник! 🫶🎶\nПомогать вам — это моё удовольствие 🖤",
-    'en': "Your song is ready! 🎧✨ Listen and enjoy! I'm always your music companion! 🫶🎶\nHelping you is my pleasure 🖤"
+    'kk': "Сіз таңдаған әуен дайын! 🎧",
+    'ru': "Ваша песня готова! 🎧",
+    'en': "Your song is ready! 🎧"
 }
 
 NOT_FOUND_MESSAGES = {
-    'kk': "Өкінішке орай, бұл әнді таба алмадым.🥲\nАвторлық құқықтар мен басқа да шектеулер себепті, немесе басқа әуен іздеп көріңіз! Әр қашан сізге көмектесуге дайынмын 🎶✨🫂",
-    'ru': "Извините, не удалось найти эту песню.🥲\nВозможно, из-за авторских прав или других ограничений. Попробуйте найти другую песню! 🎶✨🫂",
-    'en': "Sorry, I couldn't find this song.🥲\nIt might be due to copyright restrictions or other limitations. Try finding another song! I'm always here to help! 🎶✨🫂"
+    'kk': "Өкінішке орай, бұл әнді таба алмадым.",
+    'ru': "Извините, не удалось найти эту песню.",
+    'en': "Sorry, I couldn't find this song."
 }
 
 SEARCHING_MESSAGES = {
-    'kk': "Ән ізделіп жатыр... Күте тұрыңыз.",
-    'ru': "Песня ищется... Пожалуйста, подождите.",
-    'en': "Searching for the song... Please wait."
+    'kk': "Ән ізделіп жатыр...",
+    'ru': "Песня ищется...",
+    'en': "Searching for the song..."
 }
 
-user_lang = {}  # user_id: 'kk' or 'ru' or 'en'
+user_lang = {}
 
 def start(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
@@ -62,7 +68,6 @@ def download_audio(query: str, file_name: str = "song.mp3") -> str or None:
         'outtmpl': file_name,
         'noplaylist': True,
         'quiet': False,
-        'verbose': True,
         'default_search': 'ytsearch5',
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
@@ -75,23 +80,13 @@ def download_audio(query: str, file_name: str = "song.mp3") -> str or None:
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
             info = ydl.extract_info(query, download=False)
-            print("Search results:")
-            for i, entry in enumerate(info.get('entries', [])[:5], 1):
-                print(f"{i}. {entry.get('title')} — {entry.get('webpage_url')}")
-
             first = info['entries'][0]
             ydl.download([first['webpage_url']])
             if os.path.exists(file_name):
                 return file_name
-        except Exception as e:
-            print("YouTube download error:", e)
-
-        try:
-            info2 = ydl.extract_info(f"scsearch1:{query}", download=True)
-            return file_name if os.path.exists(file_name) else None
-        except Exception as e:
-            print("SoundCloud download error:", e)
-            return None
+        except:
+            pass
+    return None
 
 def handle_music_request(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
@@ -100,19 +95,15 @@ def handle_music_request(update: Update, context: CallbackContext):
     if not lang_code:
         keyboard = [[key for key in LANGUAGES]]
         reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=False, resize_keyboard=True)
-        update.message.reply_text(
-            "2. Алдымен тілді таңдаңыз! / Сначала выберите язык! / Please select a language first!",
-            reply_markup=reply_markup
-        )
+        update.message.reply_text("2. Алдымен тілді таңдаңыз!", reply_markup=reply_markup)
         return
 
     if update.message.audio or update.message.photo:
-        update.message.reply_text("Мен тек мәтіндермен жұмыс істей аламын! 🚫🎶")
+        update.message.reply_text("Мен тек мәтіндермен жұмыс істей аламын! 🚫")
         return
 
     song_name = update.message.text.strip()
     update.message.reply_text(SEARCHING_MESSAGES[lang_code])
-
     audio_file = download_audio(song_name)
 
     if audio_file:
@@ -122,19 +113,22 @@ def handle_music_request(update: Update, context: CallbackContext):
     else:
         update.message.reply_text(NOT_FOUND_MESSAGES[lang_code])
 
-def main():
-    updater = Updater(TOKEN, use_context=True)
-    dp = updater.dispatcher
+# Тіркеу
+dispatcher.add_handler(CommandHandler("start", start))
+dispatcher.add_handler(MessageHandler(Filters.text & Filters.regex('^(🇰🇿 Қазақша|🇷🇺 Русский|🇬🇧 English)$'), handle_language_selection))
+dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_music_request))
 
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(MessageHandler(
-        Filters.text & Filters.regex('^(🇰🇿 Қазақша|🇷🇺 Русский|🇬🇧 English)$'),
-        handle_language_selection
-    ))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_music_request))
+# Telegram webhook қабылдайтын маршрут
+@app.route(f"/{TOKEN}", methods=["POST"])
+def webhook():
+    update = Update.de_json(request.get_json(force=True), bot)
+    dispatcher.process_update(update)
+    return "ok", 200
 
-    updater.start_polling()
-    updater.idle()
+# Heroku тіркеу кезінде жұмыс істеу үшін басты бет
+@app.route("/")
+def index():
+    return "Bot is running!"
 
 if __name__ == '__main__':
-    main()
+    app.run(debug=False)
