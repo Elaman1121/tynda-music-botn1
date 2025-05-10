@@ -61,7 +61,7 @@ def download_audio(query: str, file_name: str = "song.mp3") -> str or None:
             'preferredcodec': 'mp3',
             'preferredquality': '320',  # 320 kbps сапасы
         }],
-        'cookiefile': 'cookies.txt',  # cookies.txt файлын қосу
+        #'cookiefile': 'cookies.txt',  # cookies.txt файлын қосу
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
