@@ -1,43 +1,34 @@
-import requests
-import time
+import os
+import telebot
+from flask import Flask, request
 
-# Боттың токені
-TOKEN = '7302516914:AAFf7O9szcJD5GZGSsSs3TuyHdyvKhF8zN8'
+TOKEN = os.environ.get("TOKEN")
+bot = telebot.TeleBot(TOKEN)
+server = Flask(__name__)
 
-# Топтың ID-і (осы жерге нақты топтың ID-ін жазыңыз)
-chat_id = '<Топтың ID-і>'
+# Музыка файлы (осы файлды repo-ңа салып қой)
+AUDIO_FILE = 'music.mp3'
 
-# Музыка файлының жолы (осы жерге нақты музыканың файлын жазыңыз)
-file_path = 'path_to_music_file.mp3'
+@bot.message_handler(commands=['start', 'help'])
+def send_welcome(message):
+    bot.reply_to(message, "Сәлем! Музыка алу үшін 'music' деп жаз!")
 
-# Боттың жаңартуларын алу URL
-url = f'https://api.telegram.org/bot{TOKEN}/getUpdates'
+@bot.message_handler(func=lambda message: message.text and 'music' in message.text.lower())
+def send_music(message):
+    with open(AUDIO_FILE, 'rb') as audio:
+        bot.send_audio(message.chat.id, audio)
 
-# Қайдадан бастау керек екенін сақтау үшін offset мәні
-offset = None
+@server.route(f"/{TOKEN}", methods=['POST'])
+def webhook():
+    bot.process_new_updates([telebot.types.Update.de_json(request.stream.read().decode("utf-8"))])
+    return "OK", 200
 
-while True:
-    # Жаңартуларды алу (offset қолданамыз)
-    params = {'offset': offset}
-    response = requests.get(url, params=params)
-    updates = response.json()
-    
-    # Хабарламаларға жауап беру
-    for update in updates['result']:
-        if 'message' in update:
-            message = update['message']
-            text = message.get('text', '')
-            print(f"Received message: {text}")
-            
-            # Егер хабарлама музыканы сұраса
-            if text.lower() == 'music':
-                # Файлды жіберу
-                send_url = f'https://api.telegram.org/bot{TOKEN}/sendAudio?chat_id={chat_id}'
-                with open(file_path, 'rb') as file:
-                    requests.post(send_url, files={'audio': file})
-            
-            # Алдағы хабарламаларға жауап беруге мүмкіндік беру үшін offset мәнін жаңарту
-            offset = update['update_id'] + 1
-    
-    # Әр 2 секунд сайын жаңартуларды тексеру
-    time.sleep(2)
+@server.route("/")
+def index():
+    return "Bot is working", 200
+
+# Heroku портын алу
+if __name__ == "__main__":
+    bot.remove_webhook()
+    bot.set_webhook(url=f"https://tynda-music-botn1.herokuapp.com/{TOKEN}")
+    server.run(host="0.0.0.0", port=int(os.environ.get('PORT', 5000)))
